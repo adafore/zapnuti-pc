@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b1013">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://ntfy.sh; base-uri 'none'; form-action 'none'">
+<title>Ovladač PC</title>
+<style>
+:root{
+  --bg:#0b1013; --bg2:#121a1f; --text:#e6eef0; --muted:#8a9aa1; --line:#223038;
+  --on:86,216,200; --off:208,98,107;
+  --font:"Avenir Next","Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  box-sizing:border-box;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{
+  background:
+    radial-gradient(900px 600px at 50% 42%, rgba(86,216,200,.05), transparent 70%),
+    radial-gradient(700px 500px at 50% 110%, rgba(208,98,107,.045), transparent 70%),
+    var(--bg);
+  color:var(--text); font-family:var(--font); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; min-height:100%;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-tap-highlight-color:transparent;
+}
+main{display:flex;flex-direction:column;align-items:center;gap:clamp(36px,7vh,64px);width:100%;padding:24px}
+.pair{display:flex;gap:clamp(18px,6vw,64px);justify-content:center;animation:enter 1.1s cubic-bezier(.2,.7,.2,1) both}
+@keyframes enter{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+
+.orb{
+  --p:0; --c:var(--on);
+  position:relative; width:clamp(132px,38vw,184px); aspect-ratio:1; border-radius:50%;
+  border:0; padding:0; margin:0; cursor:pointer; color:var(--text); font:inherit;
+  background:radial-gradient(circle at 50% 35%, #18242a, var(--bg2) 70%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 0 0 1px var(--line),
+    0 18px 40px rgba(0,0,0,.45),
+    0 0 calc(var(--p)*56px) calc(var(--p)*6px) rgba(var(--c), calc(var(--p)*.38));
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+  transition:transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease;
+  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+  touch-action:manipulation; outline:none;
+}
+.orb.off{--c:var(--off)}
+.orb.charging{transform:scale(.975);transition:transform .25s ease}
+.orb.charging{box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 0 0 1px rgba(var(--c),.35),
+    0 18px 40px rgba(0,0,0,.45),
+    0 0 calc(var(--p)*56px) calc(var(--p)*6px) rgba(var(--c), calc(var(--p)*.38))}
+.orb:focus-visible{box-shadow:0 0 0 2px var(--bg),0 0 0 4px rgba(var(--c),.9),0 18px 40px rgba(0,0,0,.45)}
+.orb[aria-disabled="true"]{opacity:.42;cursor:not-allowed;filter:saturate(.6)}
+.orb svg.ring{position:absolute;inset:-2px;width:calc(100% + 4px);height:calc(100% + 4px);transform:rotate(-90deg);pointer-events:none;overflow:visible}
+.ring circle{fill:none;stroke-width:1.6;stroke-linecap:round}
+.ring .track{stroke:rgba(255,255,255,.05)}
+.ring .fill{stroke:rgb(var(--c));stroke-dasharray:289.03;stroke-dashoffset:289.03;filter:drop-shadow(0 0 3px rgba(var(--c),.8))}
+.orb .ico{width:30px;height:30px;stroke:rgb(var(--c));fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;opacity:.92}
+.orb .lbl{font-size:clamp(15px,4.2vw,18px);font-weight:500;letter-spacing:.01em;pointer-events:none}
+
+.status{min-height:1.6em;max-width:34ch;text-align:center;color:var(--muted);font-size:14.5px;line-height:1.5;transition:color .3s}
+.status.ok{color:rgb(var(--on))}
+.status.err{color:rgb(var(--off))}
+
+.gear{
+  position:fixed; top:calc(14px + env(safe-area-inset-top)); right:calc(14px + env(safe-area-inset-right));
+  width:44px;height:44px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;
+  display:grid;place-items:center;transition:color .25s,background .25s,transform .5s;
+}
+.gear:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.gear[aria-expanded="true"]{color:var(--text);transform:rotate(60deg)}
+.gear:focus-visible{outline:2px solid rgba(var(--on),.9);outline-offset:2px}
+.gear svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+.panel{
+  position:fixed; top:calc(66px + env(safe-area-inset-top)); right:calc(14px + env(safe-area-inset-right));
+  width:min(calc(100vw - 28px),340px); padding:18px; border-radius:18px;
+  background:rgba(18,26,31,.96); box-shadow:0 0 0 1px var(--line),0 24px 60px rgba(0,0,0,.55);
+  display:none; flex-direction:column; gap:14px; transform-origin:top right;
+}
+.panel.open{display:flex;animation:pop .22s ease both}
+@keyframes pop{from{opacity:0;transform:scale(.96) translateY(-4px)}to{opacity:1;transform:none}}
+.panel label.f{font-size:13px;color:var(--muted)}
+.panel input[type=password]{
+  width:100%;margin-top:6px;padding:12px 14px;border-radius:12px;border:0;background:#0b1013;color:var(--text);
+  box-shadow:0 0 0 1px var(--line);font:inherit;font-size:15px;letter-spacing:.04em;outline:none;transition:box-shadow .2s;
+}
+.panel input[type=password]:focus{box-shadow:0 0 0 1px rgba(var(--on),.8)}
+.panel input.bad{box-shadow:0 0 0 1px rgba(var(--off),.8)}
+.hint{font-size:12.5px;min-height:1.3em;color:var(--muted)}
+.hint.err{color:rgb(var(--off))}
+.chk{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--text);cursor:pointer}
+.chk input{width:18px;height:18px;accent-color:rgb(var(--on));margin:0}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{
+  font:inherit;font-size:14px;padding:10px 16px;border-radius:12px;border:0;cursor:pointer;color:var(--text);
+  background:rgba(255,255,255,.06);transition:background .2s;
+}
+.btn:hover{background:rgba(255,255,255,.1)}
+.btn.primary{background:rgba(var(--on),.16);color:rgb(var(--on))}
+.btn.primary:hover{background:rgba(var(--on),.26)}
+.btn:focus-visible{outline:2px solid rgba(var(--on),.9);outline-offset:2px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:340px){main{padding:16px}.pair{gap:16px}}
+
+@media (prefers-reduced-motion:reduce){
+  .pair,.panel.open{animation:none}
+  .orb,.orb.charging,.gear,.status,.btn,.panel input{transition:none}
+  .orb.charging{transform:none}
+  .gear[aria-expanded="true"]{transform:none}
+}
+</style>
+</head>
+<body>
+<button class="gear" id="gear" type="button" aria-label="Nastavení přístupového kódu" aria-expanded="false" aria-controls="panel">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+</button>
+
+<section class="panel" id="panel" aria-label="Nastavení">
+  <div>
+    <label class="f" for="code">Přístupový kód</label>
+    <input id="code" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" aria-describedby="hint" placeholder="64 znaků 0–9, a–f">
+    <div class="hint" id="hint"></div>
+  </div>
+  <label class="chk"><input type="checkbox" id="remember"> Zapamatovat na tomto zařízení</label>
+  <div class="row">
+    <button class="btn primary" id="apply" type="button">Použít kód</button>
+    <button class="btn" id="forget" type="button">Zapomenout kód</button>
+  </div>
+</section>
+
+<main>
+  <div class="pair">
+    <button class="orb on" id="btnOn" type="button" data-action="on" data-ms="2500" aria-describedby="status" aria-label="Zapnout PC. Podržte 2,5 sekundy.">
+      <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="46"/><circle class="fill" cx="50" cy="50" r="46"/></svg>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8"/><path d="M6.6 6.8a8 8 0 1 0 10.8 0"/></svg>
+      <span class="lbl">Zapnout PC</span>
+    </button>
+    <button class="orb off" id="btnOff" type="button" data-action="off" data-ms="4000" aria-describedby="status" aria-label="Vypnout PC. Podržte 4 sekundy.">
+      <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="46"/><circle class="fill" cx="50" cy="50" r="46"/></svg>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8"/><path d="M6.6 6.8a8 8 0 1 0 10.8 0"/></svg>
+      <span class="lbl">Vypnout PC</span>
+    </button>
+  </div>
+  <div class="status" id="status" role="status" aria-live="polite">Podržte tlačítko, dokud se prstenec nezaplní.</div>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var STORE_KEY = "pcremote.code";
+  var CODE_RE = /^[0-9a-f]{64}$/;
+  var CIRC = 289.03;
+  var COOLDOWN_MS = 1500;
+  var TIMEOUT_MS = 15000;
+
+  var $ = function(id){ return document.getElementById(id); };
+  var gear=$("gear"), panel=$("panel"), codeInput=$("code"), hint=$("hint"),
+      remember=$("remember"), applyBtn=$("apply"), forgetBtn=$("forget"), statusEl=$("status");
+  var orbs=[$("btnOn"),$("btnOff")];
+
+  var accessCode = null;   // jen v paměti
+  var busy = false;
+  var hold = null;
+  var latchedInput = null;
+  var statusTimer = null;
+
+  /* ---------- stav a zprávy ---------- */
+  function say(text, kind, autoClear){
+    clearTimeout(statusTimer);
+    statusEl.textContent = text;
+    statusEl.className = "status" + (kind ? " " + kind : "");
+    if(autoClear){
+      statusTimer = setTimeout(function(){
+        statusEl.textContent = "Podržte tlačítko, dokud se prstenec nezaplní.";
+        statusEl.className = "status";
+      }, autoClear);
+    }
+  }
+  function setBusy(v){
+    busy = v;
+    orbs.forEach(function(o){ o.setAttribute("aria-disabled", v || !accessCode ? "true" : "false"); });
+  }
+  function normalize(v){ return String(v||"").trim().toLowerCase(); }
+
+  /* ---------- nastavení kódu ---------- */
+  function openPanel(){
+    panel.classList.add("open");
+    gear.setAttribute("aria-expanded","true");
+    codeInput.focus();
+  }
+  function closePanel(returnFocus){
+    panel.classList.remove("open");
+    gear.setAttribute("aria-expanded","false");
+    if(returnFocus) gear.focus();
+  }
+  function setHint(t, err){
+    hint.textContent = t || "";
+    hint.className = "hint" + (err ? " err" : "");
+    codeInput.classList.toggle("bad", !!err);
+  }
+  function applyCode(){
+    var v = normalize(codeInput.value);
+    if(!CODE_RE.test(v)){
+      setHint("Kód musí mít přesně 64 znaků 0–9 a a–f.", true);
+      return;
+    }
+    accessCode = v;
+    if(remember.checked){
+      try{ localStorage.setItem(STORE_KEY, v); }catch(e){ setHint("Kód se nepodařilo uložit do zařízení; platí jen do zavření stránky.", true); }
+    }else{
+      try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+    }
+    setBusy(busy);
+    codeInput.value = "";
+    setHint("");
+    say("Kód je připraven.", "", 2500);
+    closePanel(true);
+  }
+  function forgetCode(){
+    cancelHold(true);
+    accessCode = null;
+    setBusy(busy);
+    try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+    codeInput.value = "";
+    remember.checked = false;
+    setHint("Kód byl zapomenut.");
+    say("Kód byl zapomenut.", "", 2500);
+  }
+  gear.addEventListener("click", function(){
+    panel.classList.contains("open") ? closePanel(false) : openPanel();
+  });
+  applyBtn.addEventListener("click", applyCode);
+  forgetBtn.addEventListener("click", forgetCode);
+  remember.addEventListener("change", function(){
+    if(!remember.checked){ try{ localStorage.removeItem(STORE_KEY); }catch(e){} }
+  });
+  codeInput.addEventListener("input", function(){
+    var v = normalize(codeInput.value);
+    if(!v){ setHint(""); return; }
+    setHint(CODE_RE.test(v) ? "" : "Zadáno " + v.length + " z 64 znaků.", v.length>64 || /[^0-9a-f]/.test(v));
+  });
+  codeInput.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){ e.preventDefault(); applyCode(); }
+  });
+
+  try{
+    var saved = normalize(localStorage.getItem(STORE_KEY));
+    if(CODE_RE.test(saved)){ accessCode = saved; remember.checked = true; }
+    else if(saved){ localStorage.removeItem(STORE_KEY); }
+  }catch(e){}
+  setBusy(false);
+  if(!accessCode){
+    openPanel();
+    say("Nejdřív zadejte přístupový kód.");
+  }
+
+  /* ---------- vykreslení nabíjení ---------- */
+  function render(o, p){
+    o.style.setProperty("--p", p.toFixed(4));
+    o.querySelector(".fill").style.strokeDashoffset = (CIRC * (1 - p)).toFixed(2);
+  }
+  function resetVisual(o){
+    o.classList.remove("charging");
+    render(o, 0);
+  }
+
+  /* ---------- podržení ---------- */
+  function startHold(o, source, pointerId, keyName){
+    if(busy || hold || latchedInput) return;
+    if(!accessCode){
+      say("Nejdřív zadejte přístupový kód.", "err");
+      openPanel();
+      return;
+    }
+    hold = {
+      o:o, action:o.dataset.action, ms:Number(o.dataset.ms),
+      start:performance.now(), source:source, pointerId:pointerId, keyName:keyName, raf:0, p:0
+    };
+    o.classList.add("charging");
+    say(hold.action === "on" ? "Držte pro zapnutí…" : "Držte pro vypnutí…");
+    hold.raf = requestAnimationFrame(tick);
+  }
+  function tick(now){
+    if(!hold) return;
+    var p = Math.min(1, (now - hold.start) / hold.ms);
+    hold.p = p;
+    render(hold.o, p);
+    if(p >= 1){ complete(); return; }
+    hold.raf = requestAnimationFrame(tick);
+  }
+  function cancelHold(silent){
+    if(!hold) return;
+    var h = hold; hold = null;
+    cancelAnimationFrame(h.raf);
+    if(h.pointerId != null){ try{ h.o.releasePointerCapture(h.pointerId); }catch(e){} }
+    resetVisual(h.o);
+    if(!silent && h.p > 0.03) say("Podržení přerušeno. Pro odeslání držte až do zaplnění.", "", 3500);
+    else if(!busy) say("Podržte tlačítko, dokud se prstenec nezaplní.");
+  }
+  function complete(){
+    var h = hold; hold = null;
+    latchedInput = {source:h.source, pointerId:h.pointerId, keyName:h.keyName};
+    if(h.pointerId != null){ try{ h.o.releasePointerCapture(h.pointerId); }catch(e){} }
+    setBusy(true);
+    say("Odesílám…");
+    send(h.action).then(function(){
+      say(h.action === "on" ? "Povel k zapnutí odeslán" : "Povel k vypnutí odeslán", "ok");
+    }, function(err){
+      say(errorText(err), "err");
+    }).then(function(){
+      setTimeout(function(){
+        resetVisual(h.o);
+        setBusy(false);
+      }, COOLDOWN_MS);
+    });
+  }
+
+  /* ---------- ovládání: ukazatel ---------- */
+  orbs.forEach(function(o){
+    o.addEventListener("pointerdown", function(e){
+      if(!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
+      if(busy || hold) return;
+      try{ o.setPointerCapture(e.pointerId); }catch(err){}
+      startHold(o, "pointer", e.pointerId);
+    });
+    o.addEventListener("pointermove", function(e){
+      if(!hold || hold.source !== "pointer" || hold.o !== o || e.pointerId !== hold.pointerId) return;
+      var r = o.getBoundingClientRect();
+      if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom){
+        cancelHold();
+      }
+    });
+    o.addEventListener("pointerup", function(e){
+      if(hold && hold.source === "pointer" && e.pointerId === hold.pointerId) cancelHold();
+    });
+    o.addEventListener("pointercancel", function(e){
+      if(hold && hold.source === "pointer" && e.pointerId === hold.pointerId) cancelHold();
+    });
+    o.addEventListener("lostpointercapture", function(e){
+      if(hold && hold.source === "pointer" && hold.o === o && e.pointerId === hold.pointerId){ hold.pointerId = null; cancelHold(); }
+    });
+    o.addEventListener("pointerleave", function(e){
+      if(hold && hold.source === "pointer" && hold.o === o && e.pointerId === hold.pointerId) {
+        var r = o.getBoundingClientRect();
+        if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) cancelHold();
+      }
+    });
+    o.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+    o.addEventListener("dragstart", function(e){ e.preventDefault(); });
+    o.addEventListener("selectstart", function(e){ e.preventDefault(); });
+    o.addEventListener("click", function(e){ e.preventDefault(); }); /* obyčejný klik nic neodesílá */
+    o.addEventListener("blur", function(){ if(hold && hold.o === o) cancelHold(); });
+
+    /* klávesnice */
+    o.addEventListener("keydown", function(e){
+      if(e.key !== " " && e.key !== "Enter" && e.key !== "Spacebar") return;
+      e.preventDefault();
+      if(e.repeat) return;
+      startHold(o, "key", null, e.key);
+    });
+    o.addEventListener("keyup", function(e){
+      if(e.key !== " " && e.key !== "Enter" && e.key !== "Spacebar") return;
+      e.preventDefault();
+      if(hold && hold.source === "key" && hold.o === o) cancelHold();
+    });
+  });
+
+  document.addEventListener("pointerup", function(e){
+    if(latchedInput && latchedInput.source === "pointer" && latchedInput.pointerId === e.pointerId) latchedInput = null;
+  }, true);
+  document.addEventListener("pointercancel", function(e){
+    if(latchedInput && latchedInput.source === "pointer" && latchedInput.pointerId === e.pointerId) latchedInput = null;
+  }, true);
+  document.addEventListener("keyup", function(e){
+    if(latchedInput && latchedInput.source === "key" && latchedInput.keyName === e.key) latchedInput = null;
+  }, true);
+
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Escape") return;
+    if(hold){ cancelHold(); return; }
+    if(panel.classList.contains("open") && accessCode) closePanel(true);
+  });
+  window.addEventListener("blur", function(){ cancelHold(); latchedInput = null; });
+  document.addEventListener("visibilitychange", function(){ if(document.hidden) cancelHold(); });
+  window.addEventListener("pagehide", function(){ cancelHold(true); });
+
+  /* ---------- protokol ---------- */
+  function hexToBytes(hex){
+    var out = new Uint8Array(hex.length / 2);
+    for(var i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+    return out;
+  }
+  function bytesToHex(buf){
+    var a = new Uint8Array(buf), s = "";
+    for(var i = 0; i < a.length; i++) s += (a[i] < 16 ? "0" : "") + a[i].toString(16);
+    return s;
+  }
+  function fail(code){ var e = new Error(code); e.pc = code; return e; }
+
+  async function send(action){
+    if(action !== "on" && action !== "off") throw fail("action");
+    if(!window.isSecureContext || !window.crypto || !crypto.subtle || typeof crypto.randomUUID !== "function") throw fail("crypto");
+    if(!CODE_RE.test(accessCode || "")) throw fail("code");
+
+    var keyBytes = hexToBytes(accessCode);
+    var digest = await crypto.subtle.digest("SHA-256", keyBytes);
+    var topic = "pc-" + bytesToHex(digest).slice(0, 40);
+
+    /* hodnoty vznikají až po dokončení podržení */
+    var issuedAt = Math.floor(Date.now() / 1000);
+    var nonce = crypto.randomUUID().toLowerCase();
+    var text = "v1\n" + action + "\n" + issuedAt + "\n" + nonce;
+
+    var key = await crypto.subtle.importKey("raw", keyBytes, {name:"HMAC", hash:"SHA-256"}, false, ["sign"]);
+    var sig = bytesToHex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(text)));
+
+    var body = JSON.stringify({v:1, action:action, issued_at:issuedAt, nonce:nonce, signature:sig});
+    var ctrl = new AbortController();
+    var timer = setTimeout(function(){ ctrl.abort(); }, TIMEOUT_MS);
+    var res;
+    try{
+      res = await fetch("https://ntfy.sh/" + topic, {
+        method:"POST",
+        headers:{"Content-Type":"text/plain; charset=utf-8"},
+        body:body,
+        signal:ctrl.signal,
+        cache:"no-store",
+        credentials:"omit",
+        referrerPolicy:"no-referrer"
+      });
+    }catch(e){
+      if(e && e.name === "AbortError") throw fail("timeout");
+      throw fail("network");
+    }finally{
+      clearTimeout(timer);
+    }
+    if(res.status === 429) throw fail("429");
+    if(!res.ok){ var er = fail("http"); er.status = res.status; throw er; }
+  }
+
+  function errorText(e){
+    switch(e && e.pc){
+      case "crypto":  return "Stránka musí běžet přes HTTPS a v prohlížeči s podporou Web Crypto. Povel nebyl odeslán.";
+      case "code":    return "Chybí platný přístupový kód. Povel nebyl odeslán.";
+      case "timeout": return "Odeslání vypršelo po 15 s. Není jisté, zda povel dorazil. Podržte tlačítko znovu.";
+      case "network": return "Nepodařilo se spojit se službou ntfy.sh. Zkontrolujte připojení a podržte znovu.";
+      case "429":     return "Služba ntfy.sh je dočasně přetížená (429). Zkuste to za chvíli.";
+      case "http":    return "Služba odmítla požadavek (HTTP " + e.status + "). Podržte znovu.";
+      default:        return "Povel se nepodařilo odeslat. Podržte tlačítko znovu.";
+    }
+  }
+})();
+</script>
+</body>
+</html>
