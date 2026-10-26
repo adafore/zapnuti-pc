@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>Ovladač PC</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#18272e"/>
+      <stop offset="1" stop-color="#080e12"/>
+    </linearGradient>
+    <radialGradient id="halo">
+      <stop stop-color="#56d8c8" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#56d8c8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#5c8b8a" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#223038" stop-opacity=".5"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#a5f6df"/>
+      <stop offset="1" stop-color="#48cabb"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+  </defs>
+  <path fill="url(#tile)" d="M0 0h512v512H0z"/>
+  <circle cx="256" cy="250" r="224" fill="url(#halo)"/>
+  <circle cx="256" cy="256" r="164" fill="#0b1419" stroke="url(#rim)" stroke-width="2"/>
+  <circle cx="256" cy="256" r="151" fill="none" stroke="#56d8c8" stroke-opacity=".05" stroke-width="2"/>
+  <g fill="none" stroke-linecap="round" stroke-width="24">
+    <path d="M190 179a104 104 0 1 0 132 0M256 134v111" stroke="#56d8c8" opacity=".45" filter="url(#glow)"/>
+    <path d="M190 179a104 104 0 1 0 132 0M256 134v111" stroke="url(#mint)"/>
+  </g>
+</svg>
